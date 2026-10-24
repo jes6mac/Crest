@@ -122,16 +122,23 @@ final class BrowserElementHidingSession {
         }
     }
 
+    /// Cancels previews while the old document still owns the page. A stopped
+    /// load, provisional failure or download may never replace that document.
     func navigationStarted() {
         cancel()
-        documentID = nil
-        origin = nil
-        isAvailable = false
         showsRules = false
     }
 
-    func disconnect() {
+    /// Retires document identity only after replacement or adapter teardown.
+    func invalidateDocument() {
         navigationStarted()
+        documentID = nil
+        origin = nil
+        isAvailable = false
+    }
+
+    func disconnect() {
+        invalidateDocument()
         evaluate = nil
     }
 

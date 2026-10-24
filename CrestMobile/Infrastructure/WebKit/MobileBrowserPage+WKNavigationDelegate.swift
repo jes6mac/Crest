@@ -57,6 +57,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        elementHiding.invalidateDocument()
         if let url = webView.url { reporter.committed(url) }
         mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount &+= 1

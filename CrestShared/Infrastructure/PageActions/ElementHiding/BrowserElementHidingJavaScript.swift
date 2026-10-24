@@ -249,7 +249,8 @@ enum BrowserElementHidingJavaScript {
                     return previews.every(item => {
                         const found = matches(item.selector);
                         return item.node.isConnected && found.length === 1 && found[0] === item.node
-                            && item.node.tagName === item.tagName && labelFor(item.node) === item.label;
+                            && item.node.tagName === item.tagName
+                            && (!item.selector.includes(':nth-of-type(') || labelFor(item.node) === item.label);
                     });
                 },
                 stop(expectedDocument,token) { if (expectedDocument === documentID && token === selectionToken) stop(); }

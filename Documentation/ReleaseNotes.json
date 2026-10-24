@@ -4393,6 +4393,14 @@
     "continuous-page-element-hiding": {
       "category": "new",
       "message": "Hide several page elements in one session, with Space-specific rules, undo and a final confirmation."
+    },
+    "element-hiding-dynamic-content-confirmation": {
+      "category": "fixed",
+      "message": "Confirm hidden elements even when their text changes, while preserving checks that identify the selected content."
+    },
+    "element-hiding-uncommitted-navigation": {
+      "category": "fixed",
+      "message": "Keep element hiding available when a page navigation is cancelled, fails before loading or becomes a download."
     }
   }
 }
