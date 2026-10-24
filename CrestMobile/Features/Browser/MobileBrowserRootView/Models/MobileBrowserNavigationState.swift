@@ -35,10 +35,10 @@ final class MobileBrowserNavigationState {
     /// regular width, which hides again once the window widens.
     @ObservationIgnored
     private var dockedHiddenSidebarWhileNarrow = false
-    /// Whether the window put its docked sidebar away because a fold divides
-    /// a split's pages. It docks again once the fold no longer does, and the
+    /// Whether the window put its docked sidebar away to fit a split or keep
+    /// its pages on opposite sides of a fold. It docks again when they fit, and the
     /// window's saved state never hears of it.
-    private(set) var hidSidebarForFoldedSplit = false
+    private(set) var hidSidebarForSplitLayout = false
 
     init(
         regularSidebarIsPresented: Bool = true,
@@ -253,17 +253,17 @@ final class MobileBrowserNavigationState {
         dockIfFloatingIsNotAllowed()
     }
 
-    /// Puts a docked sidebar away while a fold divides a split's pages, so the
-    /// pages take a side each and the sidebar floats over them when called,
-    /// and docks it again when the fold no longer does.
-    func adaptToFoldedSplit(_ splitsPagesAtFold: Bool) {
-        if splitsPagesAtFold {
+    /// Puts a docked sidebar away while a split needs its width or a fold
+    /// divides its pages. The sidebar floats over them when called and docks
+    /// again when the original arrangement fits.
+    func adaptToSplitLayout(_ hidesSidebar: Bool) {
+        if hidesSidebar {
             guard regularSidebarPresentation == .docked else { return }
-            hidSidebarForFoldedSplit = true
+            hidSidebarForSplitLayout = true
             hideRegularSidebar()
-        } else if hidSidebarForFoldedSplit {
-            hidSidebarForFoldedSplit = false
-            // The sidebar was docked before the fold put it away, so a narrow
+        } else if hidSidebarForSplitLayout {
+            hidSidebarForSplitLayout = false
+            // The sidebar was docked before the layout put it away, so a narrow
             // window that docked it again meanwhile must not hide it on
             // widening.
             dockedHiddenSidebarWhileNarrow = false

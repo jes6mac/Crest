@@ -4389,6 +4389,22 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "mobile-split-sidebar-fit": {
+      "category": "fixed",
+      "message": "Split pages stay fully visible in narrow windows, with the sidebar returning when there is room for it."
+    },
+    "mobile-address-draft-display-transition": {
+      "category": "fixed",
+      "message": "Keep an unfinished address or search when opening or closing a foldable iPhone."
+    },
+    "mobile-hidden-sidebar-visible-reveal": {
+      "category": "fixed",
+      "message": "Reopen a hidden sidebar with a visible button, keeping your pages in place underneath it."
+    },
+    "mobile-sidebar-edge-swipe-outside-dismissal": {
+      "category": "improved",
+      "message": "Swipe inward anywhere along the screen edge to reveal a hidden sidebar, and tap outside it to close it."
     }
   }
 }

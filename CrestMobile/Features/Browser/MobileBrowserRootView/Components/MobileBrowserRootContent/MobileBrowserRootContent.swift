@@ -17,7 +17,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State private var spacePagerPresentation = SpacePagerPresentation()
     @State var isAddressEditing = false
     @State var addressFocusRequest = 0
-    @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var historyAssignment: BrowserSpaceRuntimeAssignment?
     @State var isURLCopiedFeedbackVisible = false
     @State var visiblePageZoomFeedbackLabel: String?
@@ -63,7 +62,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             transientBrowsing: transientBrowsing,
             spaceAccess: spaceAccess,
             preferredSidebarWidth: model.sidebarWidth,
-            isCommandPalettePresented: commandPaletteMode != nil,
+            isCommandPalettePresented: model.commandPalette != nil,
             isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
             pageZoomFeedbackLabel: visiblePageZoomFeedbackLabel,
             reduceMotion: reduceMotion,
@@ -199,7 +198,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         isAddressEditing: $isAddressEditing,
                         addressFocusRequest: addressFocusRequest,
                         isCommandPalettePresented:
-                            commandPaletteMode != nil,
+                            model.commandPalette != nil,
                         commands: commandContext.paletteRegistry,
                         isCompact: true,
                         obscuresSystemSafeAreas:
@@ -225,6 +224,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         showHistory: presentHistoryFromCommand
                     )
                 )
+                .allowsHitTesting(model.commandPalette == nil)
+                .accessibilityHidden(model.commandPalette != nil)
+                .overlay { commandPaletteLayer(contentInsets: EdgeInsets()) }
                 // The page covers the window while it shows, so Settings,
                 // History and download prompts present from it; the floating
                 // sidebar lives on it too.
@@ -243,6 +245,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     space: browser.shownSpace,
                     spaces: browser.availableSpaces,
                     showSidebar: showRegularSidebar,
+                    handlePageInteraction: navigation.handleRegularPageInteraction,
                     commitSidebarWidth: commitRegularSidebarWidth,
                     sidebar: MobileBrowserSidebarSurface(
                         browser: browser,
@@ -316,8 +319,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         \.browserSettingsUsesLiveSidebar,
                         navigation.regularSidebarIsDocked && layout.reservesSidebarWidth)
                 )
-                .onChange(of: layout.splitsPagesAtFold, initial: true) { _, splits in
-                    navigation.adaptToFoldedSplit(splits)
+                .onChange(of: layout.hidesSidebarForSplit, initial: true) { _, splits in
+                    navigation.adaptToSplitLayout(splits)
                 }
                 .overlay {
                     MobileRegularUtilityFanLayer(
@@ -343,24 +346,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 }
             },
             palette: { contentInsets in
-                MobileBrowserCommandPaletteLayer(
-                    mode: commandPaletteMode,
-                    browser: browser,
-                    space: browser.shownSpace,
-                    selectedTabID: browser.shownTab?.id,
-                    commands: mobileBrowserCommandContext.paletteRegistry,
-                    isSourceAvailable: model.isPaletteSourceAvailable,
-                    selectTab: model.selectPaletteTab,
-                    openURL: { source, url, mode, opening in
-                        model.openPaletteURL(url, mode: mode, from: source, opening: opening)
-                    },
-                    dismiss: dismissCommandPalette,
-                    morphNamespace: compactChromeNamespace,
-                    overlayContentInsets: contentInsets
-                )
+                commandPaletteLayer(contentInsets: contentInsets)
             }
         )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
+        .onDisappear { model.dismissCommandPalette() }
         .focusedSceneValue(
             \.mobileBrowserCommandContext,
             commandContext
@@ -405,9 +395,14 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onGeometryChange(for: CGSize.self) { proxy in
             proxy.size
         } action: { size in
-            availableRootSize = size
             guard size.width > 0 else { return }
-            model.presentationChanged(to: MobileBrowserPresentation.fitting(availableWidth: size.width))
+            let nextPresentation = MobileBrowserPresentation.fitting(availableWidth: size.width)
+            if presentation != nextPresentation, isAddressEditing, !nextPresentation.presentsPageOverTabViewer {
+                model.presentCommandPalette(mode: .editLocation(address), commands: commandContext.paletteRegistry)
+                isAddressEditing = false
+            }
+            availableRootSize = size
+            model.presentationChanged(to: nextPresentation)
         }
         .ignoresSafeArea(
             .keyboard,

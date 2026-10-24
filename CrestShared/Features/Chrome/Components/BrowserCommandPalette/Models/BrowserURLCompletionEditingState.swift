@@ -27,4 +27,10 @@ struct BrowserURLCompletionEditingState: Equatable {
         !suppressed && !isComposing && text == query
             && selection == NSRange(location: query.utf16.count, length: 0)
     }
+
+    /// A replacement native field resumes the selection only for this exact text.
+    func selectionForRestoration(of query: String) -> NSRange? {
+        guard !isComposing, text == query else { return nil }
+        return selection
+    }
 }

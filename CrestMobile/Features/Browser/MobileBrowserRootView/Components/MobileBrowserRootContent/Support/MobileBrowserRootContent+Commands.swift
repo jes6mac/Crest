@@ -1,10 +1,10 @@
-import Foundation
+import SwiftUI
 
 extension MobileBrowserRootContent {
     /// Whether the regular shell shows its overlay palette: one was asked for,
     /// over a selected tab the palette can act on.
     var isCommandPaletteShown: Bool {
-        guard commandPaletteMode != nil, !presentation.presentsPageOverTabViewer,
+        guard model.commandPalette != nil, !presentation.presentsPageOverTabViewer,
             let source = browser.shownTabAssignment
         else {
             return false
@@ -36,7 +36,11 @@ extension MobileBrowserRootContent {
         navigation.utilityPresentation.present(.downloads)
     }
 
-    func dismissCommandPalette() {
-        commandPaletteMode = nil
+    func commandPaletteLayer(contentInsets: EdgeInsets) -> some View {
+        MobileBrowserCommandPaletteLayer(
+            model: model.commandPalette,
+            morphNamespace: presentation.presentsPageOverTabViewer ? nil : compactChromeNamespace,
+            overlayContentInsets: contentInsets
+        )
     }
 }

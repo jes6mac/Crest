@@ -19,8 +19,20 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let regular: (MobileRegularWindowLayout) -> Regular
     let palette: (EdgeInsets) -> Palette
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
 
     private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
+    private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
+
+    private var requiredDetailWidth: CGFloat {
+        let count = browser.shownCards.count
+        guard count > 1 else { return MobileRegularWindowLayout.minimumDetailWidth }
+        let insets = controlPlacement.pageInsets(appearance.pageInsets(docked: true, direction: layoutDirection))
+        return CGFloat(count) * BrowserSplitLayoutMetrics.minimumCardWidth
+            + CGFloat(count - 1) * BrowserSplitLayoutMetrics.interCardGap
+            + insets.leading + insets.trailing
+    }
 
     var body: some View {
         ZStack {
@@ -36,6 +48,11 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
 
             if presentation.presentsPageOverTabViewer {
                 compact
+                    .allowsHitTesting(!isCommandPalettePresented || navigation.compactShowsPage)
+                    .accessibilityHidden(isCommandPalettePresented && !navigation.compactShowsPage)
+                    .overlay {
+                        if !navigation.compactShowsPage { palette(EdgeInsets()) }
+                    }
             } else {
                 GeometryReader { proxy in
                     let fold = MobileBrowserFold.dividing(proxy)
@@ -46,6 +63,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                         sidebarEdge: BrowserChromeAppearance.sidebarEdge(
                             onRight: sidebarOnRight, in: layoutDirection),
                         presentsColumns: browser.shownCards.count > 1,
+                        requiredDetailWidth: requiredDetailWidth,
                         sharesTopBandWithStatusBar: MobileBrowserFold.isFoldable(proxy)
                             && proxy.size.height > proxy.size.width
                     )

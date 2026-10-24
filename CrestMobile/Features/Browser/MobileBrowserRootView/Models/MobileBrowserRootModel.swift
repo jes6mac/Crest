@@ -5,6 +5,8 @@ import SwiftUI
 @Observable
 @MainActor
 final class MobileBrowserRootModel {
+    // MARK: - Variables
+
     let browser: BrowserStore
     let sidebarInteraction: BrowserSidebarInteractionState
     let pages: MobileBrowserPageStore
@@ -17,6 +19,9 @@ final class MobileBrowserRootModel {
     var address = ""
     var hasPreparedBrowser = false
     let settings: MobileBrowserSettingsPresentation
+    /// Editing belongs to the window, not to either display's view tree.
+    private(set) var commandPalette: BrowserCommandPaletteModel?
+    private var commandPaletteSource: BrowserTabRuntimeAssignment?
 
     var showsSettings: Bool {
         get { settings.showsSheet }
@@ -27,6 +32,8 @@ final class MobileBrowserRootModel {
     var splitWidthTransaction = BrowserSplitWidthTransaction(
         persistedFractions: []
     )
+
+    // MARK: - Initializers
 
     init(
         browser: BrowserStore,
@@ -63,7 +70,7 @@ extension MobileBrowserRootModel {
         // A sidebar put away for a folded split keeps the person's choice.
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
-            isPresented: navigation.hidSidebarForFoldedSplit ? nil : navigation.regularSidebarIsDocked
+            isPresented: navigation.hidSidebarForSplitLayout ? nil : navigation.regularSidebarIsDocked
         )
     }
 
@@ -133,7 +140,7 @@ extension MobileBrowserRootModel {
         _ presentation: BrowserSidebarPresentation
     ) {
         // A sidebar put away for a folded split is not the person's choice.
-        if !navigation.hidSidebarForFoldedSplit {
+        if !navigation.hidSidebarForSplitLayout {
             windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
         }
         if !presentation.showsSidebar {
@@ -313,6 +320,7 @@ extension MobileBrowserRootModel {
         from previous: MobileBrowserRootSelectionSnapshot,
         to current: MobileBrowserRootSelectionSnapshot
     ) -> Bool {
+        reconcileCommandPalette()
         let change = MobileBrowserRootSelectionChange.resolve(
             from: previous,
             to: current
@@ -328,6 +336,7 @@ extension MobileBrowserRootModel {
         to current: MobileBrowserRootLockSnapshot
     ) {
         if current.isLocked {
+            dismissCommandPalette()
             navigation.prepareForLockedSpace()
             pages.deactivatePagePresentation()
             address = ""
@@ -503,6 +512,41 @@ extension MobileBrowserRootModel {
 extension MobileBrowserRootModel {
     var selectedTabAssignment: BrowserTabRuntimeAssignment? {
         browser.shownTabAssignment
+    }
+
+    func presentCommandPalette(
+        mode: BrowserCommandPaletteMode,
+        commands: BrowserCommandPaletteCommandRegistry? = nil
+    ) {
+        guard let source = selectedTabAssignment, isPaletteSourceAvailable(source) else { return }
+        commandPaletteSource = source
+        commandPalette = BrowserCommandPaletteModel(
+            browser: browser,
+            space: browser.shownSpace,
+            selectedTabID: source.tabID,
+            initialQuery: mode.initialQuery,
+            commands: commands,
+            isSourceAvailable: { [weak self] in self?.isPaletteSourceAvailable($0) ?? false },
+            selectTab: { [weak self] in self?.selectPaletteTab(from: $0, to: $1) ?? false },
+            openURL: { [weak self] source, url, opening in
+                self?.openPaletteURL(url, mode: mode, from: source, opening: opening) ?? false
+            },
+            dismiss: { [weak self] in self?.dismissCommandPalette() },
+            openings: [.here, .backgroundTab, .newTab]
+        )
+    }
+
+    func reconcileCommandPalette() {
+        guard let source = commandPaletteSource else { return }
+        if source != selectedTabAssignment || !isPaletteSourceAvailable(source) {
+            dismissCommandPalette()
+        }
+    }
+
+    func dismissCommandPalette() {
+        commandPalette?.invalidateURLCompletion()
+        commandPalette = nil
+        commandPaletteSource = nil
     }
 
     func isPaletteSourceAvailable(

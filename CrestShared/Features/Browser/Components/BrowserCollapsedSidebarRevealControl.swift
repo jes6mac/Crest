@@ -14,6 +14,8 @@ import SwiftUI
 /// and the sidebar it brought out would stay until that window was focused
 /// again, because nothing in a background window reports the pointer leaving.
 struct BrowserCollapsedSidebarRevealControl: View {
+    // MARK: - Variables
+
     let capabilities: BrowserInteractionCapabilities
     let showSidebar: () -> Void
     /// Whether the strip reveals the sidebar for a resting pointer itself. A
@@ -24,12 +26,16 @@ struct BrowserCollapsedSidebarRevealControl: View {
     /// Replaces the strip's width where a pointer shell lets people choose it.
     /// Touch shells ignore it: a finger needs the width the profile gives it.
     var pointerWidth: CGFloat?
+    /// A shell may dedicate the whole edge to revealing its hidden sidebar.
+    var reservesPageNavigationGesture = true
 
     @Environment(\.layoutDirection) private var layoutDirection
 
     private var metrics: BrowserCollapsedSidebarRevealMetrics {
         .resolve(capabilities)
     }
+
+    // MARK: - Actions - Layout
 
     var body: some View {
         Button(action: showSidebar) {
@@ -59,15 +65,15 @@ struct BrowserCollapsedSidebarRevealControl: View {
         metrics.revealsOnHover ? pointerWidth ?? metrics.width : metrics.width
     }
 
-    /// Where the strip answers: all of it, or on touch only its top and bottom,
-    /// since the middle of the edge is where a swipe in steps the page's
-    /// history. A clear colour takes no touches without a content shape, so the
-    /// middle falls through to the page.
+    /// A shell that reserves the page's history gesture leaves the middle of
+    /// the strip without a content shape, so touches there reach the page.
     private var revealArea: some View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
                 Color.clear.contentShape(.rect)
-                Color.clear.frame(height: proxy.size.height * metrics.pageNavigationShare)
+                Color.clear.frame(
+                    height: reservesPageNavigationGesture ? proxy.size.height * metrics.pageNavigationShare : 0
+                )
                 Color.clear.contentShape(.rect)
             }
         }

@@ -5,6 +5,26 @@ import XCTest
 
 @MainActor
 final class MobileCommandPaletteEditingTests: XCTestCase {
+    func testReplacementFieldContinuesTheDraftAtItsCaret() throws {
+        let fixture = makeEditor()
+        fixture.field.insertText("café 🧭 test")
+        fixture.coordinator.editingChanged()
+        let caret = try XCTUnwrap(fixture.field.position(from: fixture.field.beginningOfDocument, offset: 8))
+        fixture.field.selectedTextRange = fixture.field.textRange(from: caret, to: caret)
+        fixture.coordinator.editingChanged()
+
+        let replacement = BrowserPlatformCommandPaletteField(
+            model: fixture.model, presentation: .overlay, identifier: "command-palette-field", focused: true)
+        let coordinator = replacement.makeCoordinator()
+        let field = replacement.makeField(coordinator: coordinator)
+        coordinator.focusField()
+        field.insertText("nouveau ")
+        coordinator.editingChanged()
+
+        XCTAssertEqual(field.text, "café 🧭 nouveau test")
+        XCTAssertEqual(fixture.model.query, "café 🧭 nouveau test")
+    }
+
     func testEveryPresentationUsesNormalTextInputAndSubmitsSearchesAndURLs() async {
         for presentation in [BrowserCommandPalettePresentation.embedded, .overlay] {
             var openedURLs: [URL] = []

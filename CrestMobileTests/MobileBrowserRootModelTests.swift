@@ -5,6 +5,50 @@ import XCTest
 
 @MainActor
 final class MobileBrowserRootModelTests: XCTestCase {
+    func testAddressDraftSurvivesPresentationChangesWithoutNavigating() throws {
+        let space = makeSpace(index: 10)
+        let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
+        fixture.model.presentationChanged(to: .regular)
+        fixture.model.presentCommandPalette(mode: .editLocation("https://example.com/"))
+        let palette = try XCTUnwrap(fixture.model.commandPalette)
+        palette.query = "essai pliage Crest"
+        let before = fixture.browser.sessionSeed
+
+        for presentation in [MobileBrowserPresentation.compact, .regular, .compact] {
+            fixture.model.presentationChanged(to: presentation)
+            fixture.model.reconcileCommandPalette()
+            XCTAssertTrue(fixture.model.commandPalette === palette)
+            XCTAssertEqual(fixture.model.commandPalette?.query, "essai pliage Crest")
+            XCTAssertEqual(fixture.browser.sessionSeed, before)
+        }
+
+        palette.dismiss()
+        XCTAssertNil(fixture.model.commandPalette)
+        fixture.model.presentCommandPalette(mode: .editLocation("https://example.com/"))
+        XCTAssertEqual(fixture.model.commandPalette?.query, "https://example.com/")
+    }
+
+    func testAddressDraftDoesNotFollowAnotherTabOrProfile() throws {
+        var space = makeSpace(index: 10)
+        let otherTab = TabState.Seed(title: "Second", url: URL(string: "https://example.org/"), placement: .current)
+        space.tabs.append(otherTab)
+        let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
+        fixture.model.presentCommandPalette(mode: .editLocation("private draft"))
+        XCTAssertNotNil(fixture.model.commandPalette)
+        let previous = fixture.model.selectionSnapshot
+
+        fixture.browser.selectTab(otherTab.id)
+        fixture.model.synchronizeSelection(from: previous, to: fixture.model.selectionSnapshot)
+        XCTAssertNil(fixture.model.commandPalette)
+
+        fixture.model.presentCommandPalette(mode: .editLocation("another draft"))
+        XCTAssertNotNil(fixture.model.commandPalette)
+        let beforeProfile = fixture.model.selectionSnapshot
+        fixture.browser.replaceProfileForTesting(of: space.id, with: UUID())
+        fixture.model.synchronizeSelection(from: beforeProfile, to: fixture.model.selectionSnapshot)
+        XCTAssertNil(fixture.model.commandPalette)
+    }
+
     func testCompactSettingsActivationPresentsWithoutChangingTheSelectedPage() throws {
         let space = makeSpace(index: 10)
         let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
@@ -569,6 +613,8 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertNil(fixture.pages.activePage)
         XCTAssertFalse(fixture.navigation.compactShowsPage)
 
+        fixture.model.presentCommandPalette(mode: .editLocation("draft in protected space"))
+        XCTAssertNotNil(fixture.model.commandPalette)
         access.lock(protectedSpace.id)
         fixture.model.presentationChanged(to: .regular)
         let lockedRegular = fixture.model.lockSnapshot(presentation: .regular)
@@ -577,6 +623,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             to: lockedRegular
         )
         XCTAssertNil(fixture.pages.activePage)
+        XCTAssertNil(fixture.model.commandPalette)
 
         let regularUnlockSucceeded = await access.unlock(try XCTUnwrap(fixture.browser.spaceModel(protectedSpace.id)))
         XCTAssertTrue(regularUnlockSucceeded)

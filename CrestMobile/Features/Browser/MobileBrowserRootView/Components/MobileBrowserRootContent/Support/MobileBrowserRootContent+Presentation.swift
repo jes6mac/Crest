@@ -139,7 +139,7 @@ extension MobileBrowserRootContent {
             address: model.addressBinding,
             isAddressEditing: $isAddressEditing,
             addressFocusRequest: addressFocusRequest,
-            isCommandPalettePresented: commandPaletteMode != nil,
+            isCommandPalettePresented: model.commandPalette != nil,
             commands: commands,
             compactToolbarIsHidden: navigation.compactToolbarIsHidden,
             submitAddress: submitAddress,

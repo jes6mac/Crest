@@ -5,6 +5,8 @@ struct MobileCompactBrowserSurface<
     FloatingSidebar: View,
     Page: View
 >: View {
+    // MARK: - Variables
+
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.colorScheme) private var colorScheme
 
@@ -33,6 +35,8 @@ struct MobileCompactBrowserSurface<
     let page: Page
 
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
+
+    // MARK: - Actions - Layout
 
     var body: some View {
         dockedSidebar
@@ -66,6 +70,7 @@ struct MobileCompactBrowserSurface<
                                 space: space,
                                 spaces: spaces,
                                 showSidebar: showSidebar,
+                                handlePageInteraction: handlePageInteraction,
                                 commitSidebarWidth: commitSidebarWidth,
                                 sidebar: floatingSidebar,
                                 detail: floatingDetail

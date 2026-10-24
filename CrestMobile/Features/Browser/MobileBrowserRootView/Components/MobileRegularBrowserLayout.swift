@@ -6,6 +6,8 @@ import SwiftUI
 struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     BrowserChromeAnimating
 {
+    // MARK: - Variables
+
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
 
@@ -23,9 +25,12 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     let space: SpaceModel?
     var spaces: [SpaceModel] = []
     let showSidebar: () -> Void
+    let handlePageInteraction: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
     let sidebar: Sidebar
     let detail: Detail
+
+    // MARK: - Actions - Layout
 
     var body: some View {
         BrowserSidebarPageLayout(
@@ -60,7 +65,8 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                     capabilities: BrowserInteractionCapabilities(
                         supportsTouch: true
                     ),
-                    showSidebar: showSidebar, edge: sidebarEdge
+                    showSidebar: showSidebar, edge: sidebarEdge,
+                    reservesPageNavigationGesture: false
                 )
                 .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
             } else if effectivePresentation == .docked, !layout.followsFold {
@@ -76,6 +82,41 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                             * (sidebarEdge == .leading ? 1 : -1))
                 )
                 .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
+            }
+        }
+        .background {
+            // Observe the whole window, including its margins and safe areas.
+            // The sidebar claims its own taps through the same native observer.
+            Color.clear
+                .modifier(
+                    BrowserPlatformObservedTapModifier {
+                        if effectivePresentation == .floating {
+                            handlePageInteraction()
+                        }
+                    }
+                )
+                .ignoresSafeArea()
+        }
+        .overlay(alignment: sidebarEdge == .leading ? .topLeading : .topTrailing) {
+            if effectivePresentation == .collapsed, !controlPlacement.movesControlsToToolbar {
+                Button(action: showSidebar) {
+                    MobileSpaceUtilityButtonLabel(
+                        systemImage: sidebarOnRight ? "sidebar.right" : "sidebar.left"
+                    )
+                }
+                .buttonStyle(CrestChromeButtonStyle(cornerRadius: CrestLayout.minimumHitTarget / 2))
+                .glassEffect(.regular.interactive(), in: .circle)
+                .accessibilityLabel("Show Sidebar Temporarily")
+                .accessibilityIdentifier("mobile-sidebar-reveal-button")
+                .padding(.horizontal, MobileBrowserRootLayout.displayEdgeMargin)
+                .padding(
+                    .top,
+                    layout.runsSidebarToTopEdge
+                        ? MobileBrowserRootLayout.displayCornerClearance
+                        : MobileBrowserRootLayout.displayEdgeMargin
+                )
+                .frame(maxHeight: .infinity, alignment: .top)
+                .ignoresSafeArea(.container, edges: layout.runsSidebarToTopEdge ? .top : [])
             }
         }
         .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)

@@ -29,8 +29,8 @@ struct MobileRegularWindowLayout: Equatable, Sendable {
     /// Whether a fold, rather than the person, sets the sidebar's width.
     let followsFold: Bool
 
-    /// Whether a fold divides a split's pages, a side each.
-    let splitsPagesAtFold: Bool
+    /// A split keeps its columns visible before making room for the sidebar.
+    let hidesSidebarForSplit: Bool
 
     /// Whether the sidebar runs up to the window's top edge: a foldable
     /// display held upright keeps a band across its top for the status bar
@@ -52,14 +52,18 @@ struct MobileRegularWindowLayout: Equatable, Sendable {
         foldSpan: ClosedRange<CGFloat>? = nil,
         sidebarEdge: HorizontalEdge = .leading,
         presentsColumns: Bool = false,
+        requiredDetailWidth: CGFloat = Self.minimumDetailWidth,
         sharesTopBandWithStatusBar: Bool = false
     ) {
         runsSidebarToTopEdge = sharesTopBandWithStatusBar
-        splitsPagesAtFold = foldSpan != nil && presentsColumns
         let availableWidth = max(0, availableWidth)
         let preferredSidebarWidth = BrowserChromeLayout.clampedSidebarWidth(
             preferredSidebarWidth
         )
+        let sideBySideLimit = availableWidth - max(Self.minimumDetailWidth, requiredDetailWidth)
+        hidesSidebarForSplit =
+            presentsColumns
+            && (foldSpan != nil || sideBySideLimit < BrowserChromeLayout.sidebarMinimumWidth)
 
         if let foldSpan, !presentsColumns {
             let sideWidth =
@@ -79,7 +83,6 @@ struct MobileRegularWindowLayout: Equatable, Sendable {
             }
         }
 
-        let sideBySideLimit = availableWidth - Self.minimumDetailWidth
         if foldSpan == nil, sideBySideLimit >= BrowserChromeLayout.sidebarMinimumWidth {
             sidebarWidth = min(preferredSidebarWidth, sideBySideLimit)
             reservedSidebarWidth = sidebarWidth

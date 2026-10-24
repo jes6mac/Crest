@@ -63,7 +63,8 @@ struct MobileBrowserPresentation: Equatable, Sendable {
             if content.showsStartPage {
                 content.focusStartPageCommandPalette()
             } else {
-                content.commandPaletteMode = .newTab
+                content.model.presentCommandPalette(
+                    mode: .newTab, commands: content.mobileBrowserCommandContext.paletteRegistry)
             }
         },
         opensLocation: { content in
@@ -71,7 +72,8 @@ struct MobileBrowserPresentation: Equatable, Sendable {
             if content.showsStartPage {
                 content.focusStartPageCommandPalette()
             } else {
-                content.commandPaletteMode = .editLocation(content.address)
+                content.model.presentCommandPalette(
+                    mode: .editLocation(content.address), commands: content.mobileBrowserCommandContext.paletteRegistry)
             }
         }
     )

@@ -72,10 +72,8 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.refreshSuffix()
         if focused, !context.coordinator.didRequestFocus {
             context.coordinator.didRequestFocus = true
-            DispatchQueue.main.async { [weak field] in
-                guard let field else { return }
-                field.becomeFirstResponder()
-                field.selectAll(nil)
+            DispatchQueue.main.async { [weak coordinator = context.coordinator] in
+                coordinator?.focusField()
             }
         }
     }
@@ -89,6 +87,20 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         var didRequestFocus = false
 
         init(model: BrowserCommandPaletteModel) { self.model = model }
+
+        func focusField() {
+            guard let field else { return }
+            let selection = model.completionEditing.selectionForRestoration(of: model.query)
+            field.becomeFirstResponder()
+            if let selection,
+                let start = field.position(from: field.beginningOfDocument, offset: selection.location),
+                let end = field.position(from: start, offset: selection.length)
+            {
+                field.selectedTextRange = field.textRange(from: start, to: end)
+            } else {
+                field.selectAll(nil)
+            }
+        }
 
         @objc func editingChanged() {
             guard let field, let range = field.selectedTextRange else { return }
