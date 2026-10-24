@@ -7,7 +7,7 @@ import SwiftUI
 /// selected tab in `MobileBrowserDetailView`, a tab the iPhone address bar's
 /// swipe slides in beside it, and each iPad split column. They differ in the
 /// `MobileBrowserPageViewport` they are handed and in whether a tap asks for
-/// focus — never in the treatment of the page itself. A grouped tab and a plain
+/// focus, never in the treatment of the page itself. A grouped tab and a plain
 /// tab therefore render identically by construction rather than by two places
 /// agreeing to.
 ///
@@ -34,6 +34,11 @@ struct MobileBrowserLivePageView: View {
             requestFocus: requestFocus,
             hidesFromAccessibility: hidesFromAccessibility
         )
+        .overlay {
+            if isActive {
+                MobileElementHidingOverlay(page: page, viewport: viewport)
+            }
+        }
         // Keep the document color behind WebKit; docked bars own their native
         // background independently of the page's theme.
         .background(
@@ -64,6 +69,15 @@ struct MobileBrowserLivePageView: View {
             )
         )
         .id(page.tabID)
+        .sheet(
+            isPresented: Binding(
+                get: { page.elementHiding.showsRules },
+                set: { page.elementHiding.showsRules = $0 })
+        ) {
+            BrowserHiddenElementsSheet(session: page.elementHiding)
+        }
+        .onChange(of: isActive) { if !isActive { page.elementHiding.cancel() } }
+        .onDisappear { page.elementHiding.cancel() }
         .opacity(
             BrowserPageSurfacePresentation.revealsWebContent(
                 committedNavigationCount: page.committedNavigationCount

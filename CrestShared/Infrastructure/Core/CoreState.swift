@@ -51,6 +51,12 @@ final class CoreState {
         set { publish(newValue, into: \.enginePreferencesStorage, as: \.enginePreferences) }
     }
     @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(defaultEngine: nil, rules: [])
+    /// Invalidates element-hiding queries without exposing private rules in a global snapshot.
+    var elementHidingRevision: Int64 {
+        get { observed(\.elementHidingRevisionStorage, as: \.elementHidingRevision) }
+        set { publish(newValue, into: \.elementHidingRevisionStorage, as: \.elementHidingRevision) }
+    }
+    @ObservationIgnored private var elementHidingRevisionStorage: Int64 = 0
     /// Whether agents may use Crest on this device, whether they may run
     /// scripts in pages, the Spaces they may reach and the agents the person
     /// allowed.

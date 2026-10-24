@@ -5,7 +5,7 @@ namespace CrestCore.Application;
 
 /// One connection to a session file and its `checkpoint(part, data)` table.
 /// Not thread-safe: its owner serializes every call.
-internal sealed class SqliteConnection : IDisposable {
+internal sealed partial class SqliteConnection : IDisposable {
     #region Variables
 
     /// A part is never empty and never larger than a session input may be.
@@ -126,6 +126,7 @@ internal sealed class SqliteConnection : IDisposable {
     /// rewrites; `device_adoption` holds every adoption, and no older build
     /// touches it.
     public void CreateDeviceTables() {
+        CreateElementHidingTables();
         Execute("CREATE TABLE IF NOT EXISTS device_window (id TEXT PRIMARY KEY, shown_space TEXT NOT NULL, used INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_window_tab (window TEXT NOT NULL, space TEXT NOT NULL, tab TEXT, "
             + "PRIMARY KEY (window, space))");
@@ -171,7 +172,8 @@ internal sealed class SqliteConnection : IDisposable {
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
-        Agents = ReadAgents()
+        Agents = ReadAgents(),
+        ElementHiding = ReadElementHiding()
     };
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -385,6 +387,8 @@ internal sealed class SqliteConnection : IDisposable {
         WritePaletteMemories(records.PaletteMemories, written?.PaletteMemories);
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
         if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
+        if (written is null || !records.ElementHiding.Rules.SequenceEqual(written.ElementHiding.Rules)
+            || !records.ElementHiding.Exceptions.SequenceEqual(written.ElementHiding.Exceptions)) WriteElementHiding(records.ElementHiding);
     }
 
     /// The search catalog as its one document, or no row before it was first restored.

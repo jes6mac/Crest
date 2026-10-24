@@ -107,6 +107,7 @@ internal sealed partial class Device {
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         keptPermissions.Restore(records.SitePermissions);
         keptEngines.Restore(records.SiteEngines);
+        keptElements.Restore(records.ElementHiding);
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
@@ -164,11 +165,13 @@ internal sealed partial class Device {
     /// not the person closing its windows.
     public void Detach(Guid workspaceId) {
         Window[] closed;
+        NativeSessionAuthority detached;
         lock (gate) {
-            if (!workspaces.Remove(workspaceId)) return;
+            if (!workspaces.Remove(workspaceId, out detached!)) return;
             closed = [.. open.Values.Where(window => window.WorkspaceId == workspaceId)];
             foreach (var window in closed) open.Remove(window.Id);
         }
+        ForgetElementSpaces(detached.Current.Spaces.Select(space => space.Id).ToHashSet(), includeKept: false);
         foreach (var window in closed) announce(new WindowClosed(window.Id));
         announce(new WorkspaceClosed(workspaceId));
     }
@@ -229,6 +232,8 @@ internal sealed partial class Device {
         ArgumentNullException.ThrowIfNull(previous);
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(events);
+        var removedSpaces = previous.Spaces.Select(space => space.Id).Except(next.Spaces.Select(space => space.Id)).ToHashSet();
+        if (removedSpaces.Count > 0) ForgetElementSpaces(removedSpaces, includeKept: workspaceId == persistentWorkspace);
         var changes = new List<Change>(SessionChanges.Publish(workspaceId, previous, next));
         changes.AddRange(events.Changes(workspaceId));
         NativeSessionAuthority? owner;
@@ -340,7 +345,8 @@ internal sealed partial class Device {
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
-        Agents = agents
+        Agents = agents,
+        ElementHiding = keptElements.Records
     };
 
     #endregion

@@ -95,7 +95,25 @@ struct MobileBrowserDetailView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if isCompact, showsCompactToolbar {
+            if let page, page.elementHiding.isSelecting {
+                BrowserElementHidingToolbar(
+                    count: page.elementHiding.previewCount, status: page.elementHiding.status,
+                    isPrivate: page.elementHiding.state.isPrivate,
+                    canChangeGlobal: page.elementHiding.state.canChangeGlobal,
+                    isBusy: page.elementHiding.isBusy,
+                    allSpaces: Binding(
+                        get: { page.elementHiding.hidesAcrossSpaces },
+                        set: { page.elementHiding.hidesAcrossSpaces = $0 }),
+                    undo: { Task { await page.elementHiding.undo() } },
+                    cancel: page.elementHiding.cancel,
+                    finish: { Task { await page.elementHiding.finish() } }
+                )
+                .frame(maxWidth: 520)
+                .padding(.horizontal, MobileBrowserChromeLayout.compactToolbarHorizontalPadding)
+                .padding(.vertical, MobileBrowserChromeLayout.compactToolbarVerticalPadding)
+                .transition(.opacity)
+                .zIndex(3)
+            } else if isCompact, showsCompactToolbar {
                 if browser.shownTab.map({ $0.surface == .startPage }) ?? true {
                     if !controlPlacement.movesControlsToToolbar {
                         MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
@@ -175,6 +193,10 @@ struct MobileBrowserDetailView: View {
                 compactToolbarItems(pageActions: pageActions)
             }
         }
+        .animation(
+            CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
+            value: page?.elementHiding.isSelecting
+        )
         .animation(
             CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: page?.isFindPresented
@@ -294,8 +316,8 @@ struct MobileBrowserDetailView: View {
     /// The probe ignores the keyboard region deliberately. SwiftUI spells
     /// keyboard avoidance as a safe area, so a probe that read it would report
     /// the keyboard's height as page chrome, and `MobileBrowserWebHostView`
-    /// would inset the page by it a second time — on top of the shortening
-    /// SwiftUI has already done — leaving the page laid out in a fraction of
+    /// would inset the page by it a second time, on top of the shortening
+    /// SwiftUI has already done, leaving the page laid out in a fraction of
     /// the web view with a dead band beneath it. What the page owes the
     /// keyboard is already paid by the layout; what it owes the window is what
     /// this measures.
@@ -421,9 +443,10 @@ struct MobileBrowserDetailView: View {
         return MobileBrowserPageViewport(
             obscuresSystemSafeAreas: obscuresSystemSafeAreas,
             systemSafeAreaInsets: safeAreaInsets,
-            bottomChromeHeight: isCompact && showsCompactToolbar
-                ? compactBottomChromeHeight
-                : 0
+            bottomChromeHeight: MobileSelectedPageActionPort(browser: browser, pages: pages, spaceAccess: spaceAccess)?
+                .activePage?.elementHiding.isSelecting == true
+                ? MobileBrowserPageViewport.compactToolbarHeight
+                : isCompact && showsCompactToolbar ? compactBottomChromeHeight : 0
         )
     }
 

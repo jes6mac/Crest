@@ -131,6 +131,7 @@ enum Change: Equatable, Sendable {
     case downloadStarted(DownloadStarted)
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
+    case elementHidingChanged(ElementHidingChanged)
     case enginePreferencesChanged(EnginePreferencesChanged)
     case enginesChanged(EnginesChanged)
     case extensionInstallAsked(ExtensionInstallAsked)
@@ -218,6 +219,7 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
     case duplicateSearchShortcut(DuplicateSearchShortcut)
+    case elementHidingLimitReached(ElementHidingLimitReached)
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
@@ -226,6 +228,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
     case folderLimitReached(FolderLimitReached)
+    case globalElementHidingUnavailable(GlobalElementHidingUnavailable)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
     case invalidAgent(InvalidAgent)
@@ -240,6 +243,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidDownloadProgress(InvalidDownloadProgress)
     case invalidDownloadSample(InvalidDownloadSample)
     case invalidDownloadText(InvalidDownloadText)
+    case invalidElementHidingRule(InvalidElementHidingRule)
     case invalidFolderPlacement(InvalidFolderPlacement)
     case invalidFolderSymbol(InvalidFolderSymbol)
     case invalidImport(InvalidImport)
@@ -554,6 +558,7 @@ extension Change {
         case .downloadStarted(let change): change.apply(to: state)
         case .downloadUpdated(let change): change.apply(to: state)
         case .downloadsRemoved(let change): change.apply(to: state)
+        case .elementHidingChanged(let change): change.apply(to: state)
         case .enginePreferencesChanged(let change): change.apply(to: state)
         case .enginesChanged(let change): change.apply(to: state)
         case .extensionInstallAsked(let change): change.apply(to: state)
@@ -626,6 +631,7 @@ extension Change {
         case .downloadStarted(let change): change.apply(to: core, in: &batch)
         case .downloadUpdated(let change): change.apply(to: core, in: &batch)
         case .downloadsRemoved(let change): change.apply(to: core, in: &batch)
+        case .elementHidingChanged(let change): change.apply(to: core, in: &batch)
         case .enginePreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .enginesChanged(let change): change.apply(to: core, in: &batch)
         case .extensionInstallAsked(let change): change.apply(to: core, in: &batch)
@@ -698,6 +704,7 @@ extension Change {
         case .downloadStarted(let change): change.note(in: &receipts)
         case .downloadUpdated(let change): change.note(in: &receipts)
         case .downloadsRemoved(let change): change.note(in: &receipts)
+        case .elementHidingChanged(let change): change.note(in: &receipts)
         case .enginePreferencesChanged(let change): change.note(in: &receipts)
         case .enginesChanged(let change): change.note(in: &receipts)
         case .extensionInstallAsked(let change): change.note(in: &receipts)
@@ -2425,6 +2432,43 @@ struct EditLinkRoute: Intent, LinkIntent, Equatable, Sendable {
     let destinationSpaceID: UUID?
 }
 
+struct ElementHidingChanged: CoreChange, Equatable, Sendable {
+    let revision: Int64
+}
+
+struct ElementHidingEntry: Equatable, Sendable {
+    let rule: ElementHidingRule
+    let isHidden: Bool
+}
+
+struct ElementHidingLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
+struct ElementHidingRule: Equatable, Sendable, Identifiable {
+    static let maximumSelectorLength: Int = 1024
+    static let maximumLabelLength: Int = 80
+
+    let id: UUID
+    let spaceID: UUID?
+    let origin: SiteOrigin
+    let selector: String
+    let tagName: String
+    let label: String
+}
+
+struct ElementHidingState: Equatable, Sendable {
+    let isPrivate: Bool
+    let canChangeGlobal: Bool
+    let entries: [ElementHidingEntry]
+}
+
+struct ElementHidingTarget: Equatable, Sendable {
+    var selector: String
+    var tagName: String
+    var label: String
+}
+
 struct EndAgentSession: Intent, AgentIntent, Equatable, Sendable {
     let sessionID: UUID
 }
@@ -2911,6 +2955,11 @@ struct FoldersChanged: CoreChange, Equatable, Sendable {
     let order: [UUID]?
 }
 
+struct FollowPageElementRule: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let ruleID: UUID
+}
+
 struct ForgetAgent: Intent, AgentIntent, Equatable, Sendable {
     let identity: AgentIdentity
 }
@@ -2923,6 +2972,11 @@ struct ForgetEngineRule: Intent, Equatable, Sendable {
     let origin: SiteOrigin
 }
 
+struct ForgetPageElementRule: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let ruleID: UUID
+}
+
 struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let row: PaletteRow.Seed
@@ -2933,9 +2987,19 @@ struct GetAgentPreferences: Query, Equatable, Sendable {
 
 }
 
+struct GetElementHiding: Query, Equatable, Sendable {
+    typealias Answer = ElementHidingState
+
+    let spaceID: UUID
+    let origin: SiteOrigin
+}
+
 struct GetEnginePreferences: Query, Equatable, Sendable {
     typealias Answer = EnginePreferences
 
+}
+
+struct GlobalElementHidingUnavailable: Equatable, Sendable {
 }
 
 struct GoToHistoryEntry: Equatable, Sendable {
@@ -2970,6 +3034,22 @@ struct HidePage: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
     let pageID: UUID
+}
+
+struct HidePageElement: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let selector: String
+    let tagName: String
+    let label: String
+    let allSpaces: Bool
+}
+
+struct HidePageElements: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let targets: [ElementHidingTarget]
+    let allSpaces: Bool
 }
 
 struct HistoryAddressList: Equatable, Sendable {
@@ -3275,6 +3355,9 @@ struct InvalidDownloadSample: Equatable, Sendable {
 
 struct InvalidDownloadText: Equatable, Sendable {
     let field: DownloadTextField
+}
+
+struct InvalidElementHidingRule: Equatable, Sendable {
 }
 
 struct InvalidFolderPlacement: Equatable, Sendable {
@@ -5863,6 +5946,11 @@ struct ShowPage: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
     let pageID: UUID
+}
+
+struct ShowPageElement: Intent, Equatable, Sendable {
+    let spaceID: UUID
+    let ruleID: UUID
 }
 
 struct ShowSetupStep: Intent, SetupFlowIntent, Equatable, Sendable {

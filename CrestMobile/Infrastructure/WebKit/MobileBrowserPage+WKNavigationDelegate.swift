@@ -32,6 +32,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+        elementHiding.navigationStarted()
         translation.reset()
         sitePermissionSession.resetMediaGrants()
         sitePermissionRequests.cancelAll()

@@ -44,6 +44,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// Whether agents may use Crest, and what the person allowed them.
     public AgentPreferences Agents { get; init; } = AgentPreferences.Off;
 
+    public ElementHidingRecords ElementHiding { get; init; } = new([], []);
+
     #endregion
 
     #region Actions - Adoption
@@ -70,7 +72,9 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && Equals(SearchCatalog, other.SearchCatalog)
         && PaletteMemories.Count == other.PaletteMemories.Count
         && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
-        && Agents.Equals(other.Agents);
+        && Agents.Equals(other.Agents)
+        && ElementHiding.Rules.SequenceEqual(other.ElementHiding.Rules)
+        && ElementHiding.Exceptions.SequenceEqual(other.ElementHiding.Exceptions);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

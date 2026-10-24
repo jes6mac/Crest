@@ -107,6 +107,10 @@ enum CrestMotion {
     /// SwiftUI animation APIs express the reload phase in seconds.
     static let reloadFeedbackPhaseSeconds: TimeInterval = 0.12
 
+    /// Dissolving a selected page block into a bounded native snapshot.
+    static let elementDissolveTransition: TimeInterval = 0.52
+    static var elementDissolve: Animation { .easeOut(duration: elementDissolveTransition) }
+
     static var step: Animation { .snappy(duration: stepTransition) }
     /// Uses SwiftUI's native default curve for full onboarding-step changes.
     static var onboardingStep: Animation { .default }

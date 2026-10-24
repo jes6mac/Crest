@@ -67,6 +67,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
     let translation = BrowserPageTranslation()
+    let elementHiding: BrowserElementHidingSession
+    @ObservationIgnored private var elementHidingDocument: BrowserWebKitElementHidingDocument?
     /// The document whole-page translation rewrites.
     var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(webView: webView) }
     var readerModeState: BrowserReaderModeState { readerModeSession.state }
@@ -203,6 +205,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         profileID = space.profileID
         faviconData = tab.displayFaviconData
         self.downloadCenter = downloadCenter
+        elementHiding = BrowserElementHidingSession(core: downloadCenter.core, spaceID: space.id)
         self.permissionCenter = permissionCenter
         self.serverTrustOverrides = serverTrustOverrides
         self.linkDestinationHost = linkDestinationHost
@@ -281,6 +284,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
 
         super.init()
+        if ownsUserContentController {
+            elementHidingDocument = BrowserWebKitElementHidingDocument(webView: webView, session: elementHiding)
+        }
         if normalizedDefaultPageZoom != BrowserDefaultPageZoomStore.defaultLevel {
             webView.pageZoom = normalizedDefaultPageZoom
         }
@@ -542,6 +548,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         readerModeSession.invalidate()
+        elementHidingDocument?.stop()
+        elementHidingDocument = nil
         mediaSessionCoordinator?.prepareForRemoval()
         webKitPage.resetAutomaticDownloads()
         webView.stopLoading()

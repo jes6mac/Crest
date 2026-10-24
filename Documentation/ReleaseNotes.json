@@ -4389,6 +4389,10 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "continuous-page-element-hiding": {
+      "category": "new",
+      "message": "Hide several page elements in one session, with Space-specific rules, undo and a final confirmation."
     }
   }
 }

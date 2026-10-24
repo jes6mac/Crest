@@ -99,6 +99,15 @@ struct MobilePageActionsContent: View {
         }
 
         if let page = pages.activePage {
+            Button("Hide Elements", systemImage: "eye.slash") {
+                page.elementHiding.start()
+            }
+            .disabled(!page.elementHiding.isAvailable || page.readerModeState.isActive)
+            .accessibilityIdentifier("page-actions-hide-elements")
+            Button("Hidden Elements…", systemImage: "eye") {
+                page.elementHiding.showsRules = true
+            }
+            .disabled(!page.elementHiding.isAvailable)
             sitePermissions(for: page)
             Menu("Translate Page", systemImage: "translate") {
                 BrowserTranslationActions(translation: page.translation)
