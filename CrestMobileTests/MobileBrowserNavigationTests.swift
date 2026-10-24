@@ -381,6 +381,28 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(navigation.defersPageActivation)
     }
 
+    func testSplitSidebarRemainsDismissibleAfterDockRequestsWithoutChangingTheSavedChoice() {
+        for initiallyDocked in [true, false] {
+            let navigation = MobileBrowserNavigationState(regularSidebarIsPresented: initiallyDocked)
+            navigation.adapt(to: .regular)
+            navigation.adaptToSplitLayout(true)
+            navigation.showRegularSidebar()
+
+            navigation.toggleRegularSidebar()
+            navigation.handleRegularPageInteraction()
+
+            XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
+            navigation.adaptToSplitLayout(false)
+            XCTAssertEqual(navigation.regularSidebarIsDocked, initiallyDocked)
+
+            navigation.adaptToSplitLayout(true)
+            navigation.adapt(to: .compact)
+            navigation.showTabViewer()
+            XCTAssertTrue(navigation.regularSidebarIsDocked)
+            XCTAssertFalse(navigation.compactShowsPage)
+        }
+    }
+
     func testSidebarEditingPauseAllowsExplicitDismissalAndResumesTheTimer() async throws {
         let navigation = MobileBrowserNavigationState(
             transientSidebarDismissalDelay: .milliseconds(60)

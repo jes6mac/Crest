@@ -39,6 +39,9 @@ final class MobileBrowserNavigationState {
     /// its pages on opposite sides of a fold. It docks again when they fit, and the
     /// window's saved state never hears of it.
     private(set) var hidSidebarForSplitLayout = false
+    /// A split can forbid docking even when the sidebar was already hidden.
+    @ObservationIgnored
+    private var splitLayoutPreventsSidebarDocking = false
 
     init(
         regularSidebarIsPresented: Bool = true,
@@ -200,6 +203,10 @@ final class MobileBrowserNavigationState {
     }
 
     func dockRegularSidebar() {
+        if !presentation.presentsPageOverTabViewer, splitLayoutPreventsSidebarDocking {
+            showRegularSidebar()
+            return
+        }
         cancelTransientSidebarDismissal()
         regularSidebarPresentation = .docked
     }
@@ -257,6 +264,7 @@ final class MobileBrowserNavigationState {
     /// divides its pages. The sidebar floats over them when called and docks
     /// again when the original arrangement fits.
     func adaptToSplitLayout(_ hidesSidebar: Bool) {
+        splitLayoutPreventsSidebarDocking = hidesSidebar
         if hidesSidebar {
             guard regularSidebarPresentation == .docked else { return }
             hidSidebarForSplitLayout = true

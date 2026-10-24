@@ -4405,6 +4405,10 @@
     "mobile-sidebar-edge-swipe-outside-dismissal": {
       "category": "improved",
       "message": "Swipe inward anywhere along the screen edge to reveal a hidden sidebar, and tap outside it to close it."
+    },
+    "mobile-split-sidebar-dismissal-after-docking": {
+      "category": "fixed",
+      "message": "A sidebar reopened over split pages still closes when you tap outside, even after trying to dock it."
     }
   }
 }
