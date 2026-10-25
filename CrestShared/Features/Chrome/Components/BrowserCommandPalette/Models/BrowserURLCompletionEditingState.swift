@@ -31,11 +31,12 @@ struct BrowserURLCompletionEditingState: Equatable {
             && selection == NSRange(location: query.utf16.count, length: 0)
     }
 
-    /// Returns the saved UTF-16 selection only for matching text outside
-    /// IME composition. The native field must validate that it can form
-    /// this range in its current document before applying it.
+    /// Returns the saved UTF-16 selection for matching text. A replacement
+    /// field cannot resume the old field's composition, so it collapses that
+    /// selection at its end instead of selecting text the next key would erase.
+    /// The native field validates the range before applying it.
     func selectionForRestoration(of query: String) -> NSRange? {
-        guard !isComposing, text == query else { return nil }
-        return selection
+        guard text == query else { return nil }
+        return isComposing ? NSRange(location: NSMaxRange(selection), length: 0) : selection
     }
 }

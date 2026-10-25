@@ -96,8 +96,9 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         init(model: BrowserCommandPaletteModel) { self.model = model }
 
         /// Captures the saved selection before first-responder callbacks can
-        /// overwrite it. Restores a matching, non-composing draft in UIKit's
-        /// UTF-16 coordinates, or selects all when no usable range remains.
+        /// overwrite it. Matching drafts resume in UIKit's UTF-16 coordinates,
+        /// with interrupted composition reduced to a caret; other text starts
+        /// selected in full when no usable saved range remains.
         func focusField() {
             guard let field else { return }
             let selection = model.completionEditing.selectionForRestoration(of: model.query)

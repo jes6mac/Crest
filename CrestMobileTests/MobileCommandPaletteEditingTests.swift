@@ -5,26 +5,53 @@ import XCTest
 
 @MainActor
 final class MobileCommandPaletteEditingTests: XCTestCase {
-    /// Recreating the native field must preserve a caret within the draft.
-    /// The emoji before that caret exercises UIKit's UTF-16 selection offsets.
+    /// Recreating the native field preserves the caret after a Unicode prefix,
+    /// even when that prefix is marked by an interrupted input composition.
+    /// Resuming must insert text without replacing the draft or marked prefix.
     func testReplacementFieldContinuesTheDraftAtItsCaret() throws {
-        let fixture = makeEditor()
-        fixture.field.insertText("café 🧭 test")
-        fixture.coordinator.editingChanged()
-        let caret = try XCTUnwrap(fixture.field.position(from: fixture.field.beginningOfDocument, offset: 8))
-        fixture.field.selectedTextRange = fixture.field.textRange(from: caret, to: caret)
-        fixture.coordinator.editingChanged()
+        for isComposing in [false, true] {
+            let fixture = makeEditor()
+            fixture.field.insertText("café 🧭 test")
+            fixture.coordinator.editingChanged()
+            let caret = try XCTUnwrap(fixture.field.position(from: fixture.field.beginningOfDocument, offset: 8))
+            if isComposing {
+                fixture.field.selectedTextRange = fixture.field.textRange(
+                    from: fixture.field.beginningOfDocument, to: caret)
+                fixture.field.setMarkedText("café 🧭 ", selectedRange: NSRange(location: 0, length: 8))
+                XCTAssertNotNil(fixture.field.markedTextRange)
+            } else {
+                fixture.field.selectedTextRange = fixture.field.textRange(from: caret, to: caret)
+            }
+            fixture.coordinator.editingChanged()
+            XCTAssertEqual(fixture.model.completionEditing.isComposing, isComposing)
+            XCTAssertEqual(fixture.field.text, fixture.model.query)
 
-        let replacement = BrowserPlatformCommandPaletteField(
-            model: fixture.model, presentation: .overlay, identifier: "command-palette-field", focused: true)
-        let coordinator = replacement.makeCoordinator()
-        let field = replacement.makeField(coordinator: coordinator)
-        coordinator.focusField()
-        field.insertText("nouveau ")
-        coordinator.editingChanged()
+            let replacement = BrowserPlatformCommandPaletteField(
+                model: fixture.model, presentation: .overlay, identifier: "command-palette-field", focused: true)
+            let coordinator = replacement.makeCoordinator()
+            let field = replacement.makeField(coordinator: coordinator)
+            let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+            let previousKeyWindow = scene.keyWindow
+            let window = UIWindow(windowScene: scene)
+            let controller = UIViewController()
+            window.rootViewController = controller
+            field.frame = CGRect(x: 20, y: 100, width: 300, height: 44)
+            controller.view.addSubview(field)
+            window.makeKeyAndVisible()
+            defer {
+                window.isHidden = true
+                window.rootViewController = nil
+                previousKeyWindow?.makeKey()
+            }
+            coordinator.focusField()
+            XCTAssertTrue(field.isFirstResponder)
+            XCTAssertTrue(try XCTUnwrap(field.selectedTextRange).isEmpty)
+            field.insertText("nouveau ")
+            coordinator.editingChanged()
 
-        XCTAssertEqual(field.text, "café 🧭 nouveau test")
-        XCTAssertEqual(fixture.model.query, "café 🧭 nouveau test")
+            XCTAssertEqual(field.text, "café 🧭 nouveau test")
+            XCTAssertEqual(fixture.model.query, "café 🧭 nouveau test")
+        }
     }
 
     /// Creates an editor backed by seeded browsing state. Unexpected tab

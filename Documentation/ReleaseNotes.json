@@ -4537,6 +4537,10 @@
     "mobile-duo-editing-and-navigation-contracts": {
       "category": "internal",
       "message": "Document mobile draft ownership, caret restoration and adaptive sidebar behavior."
+    },
+    "mobile-draft-interrupted-composition": {
+      "category": "fixed",
+      "message": "Keep a resumed address or search draft intact when a display change interrupts text composition."
     }
   }
 }
