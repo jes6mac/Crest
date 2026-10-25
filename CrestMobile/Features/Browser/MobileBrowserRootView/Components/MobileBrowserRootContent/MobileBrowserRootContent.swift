@@ -50,6 +50,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         )
     }
 
+    /// Connects both display presentations to the window-owned palette. Before
+    /// leaving compact editing, transfers the inline address draft to that
+    /// palette; losing the whole root dismisses the session.
     var body: some View {
         // One reading of the window's commands serves the scene's menu and
         // both Start Page paths.

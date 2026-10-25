@@ -7,6 +7,9 @@ import XCTest
 
 @MainActor
 final class MobileBrowserNavigationTests: XCTestCase {
+    /// Covers both initial docking choices: a constrained dock request must
+    /// leave the sidebar floating before page interaction dismisses it.
+    /// Widening restores the choice, and compact tab viewing can still dock.
     func testSplitSidebarRemainsDismissibleAfterDockRequestsWithoutChangingTheSavedChoice() {
         for initiallyDocked in [true, false] {
             let navigation = MobileBrowserNavigationState(regularSidebarIsPresented: initiallyDocked)
@@ -30,6 +33,9 @@ final class MobileBrowserNavigationTests: XCTestCase {
         }
     }
 
+    /// Mounting a compact detail must not activate a locked Space. The same
+    /// mounted view may show the page after unlock, then must withdraw its
+    /// web view on relock while retaining the resident page for later access.
     func testLockedCompactDetailNeverAutomaticallyRestoresItsPage() throws {
         var locked = makeSpace(index: 195)
         let tab = TabState.Seed(title: "Protected", url: URL(string: "about:blank"), placement: .current)

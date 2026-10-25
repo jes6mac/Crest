@@ -23,12 +23,17 @@ struct BrowserURLCompletionEditingState: Equatable {
         !isComposing && selection == NSRange(location: text.utf16.count, length: 0)
     }
 
+    /// Allows a suffix only for the matching query with an unselected caret
+    /// at its UTF-16 end, outside composition and without a prior rejection
+    /// or deletion suppressing completion.
     func canPropose(for query: String) -> Bool {
         !suppressed && !isComposing && text == query
             && selection == NSRange(location: query.utf16.count, length: 0)
     }
 
-    /// A replacement native field resumes the selection only for this exact text.
+    /// Returns the saved UTF-16 selection only for matching text outside
+    /// IME composition. The native field must validate that it can form
+    /// this range in its current document before applying it.
     func selectionForRestoration(of query: String) -> NSRange? {
         guard !isComposing, text == query else { return nil }
         return selection

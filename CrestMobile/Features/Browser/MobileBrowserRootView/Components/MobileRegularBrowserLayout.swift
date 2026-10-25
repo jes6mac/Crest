@@ -32,6 +32,9 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
 
     // MARK: - Actions - Layout
 
+    /// Keeps a constrained sidebar reachable by an edge swipe or reveal button.
+    /// While it floats, unclaimed taps anywhere in the window dismiss it;
+    /// the sidebar's own tap observer preserves interactions inside it.
     var body: some View {
         BrowserSidebarPageLayout(
             presentation: effectivePresentation, width: layout.reservedSidebarWidth, edge: sidebarEdge

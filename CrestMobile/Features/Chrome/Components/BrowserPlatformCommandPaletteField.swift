@@ -35,6 +35,9 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         makeField(coordinator: context.coordinator)
     }
 
+    /// Attaches a new UIKit field to the existing draft and redirects native
+    /// completion and text replacement to it. Weak callbacks let a replaced
+    /// field and its coordinator go away without retaining the view tree.
     func makeField(coordinator: Coordinator) -> CompletionField {
         let field = CompletionField()
         field.text = model.query
@@ -68,6 +71,9 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         return field
     }
 
+    /// Refreshes an inactive field from the model without overwriting active
+    /// typing. Each coordinator requests focus once, after SwiftUI's update,
+    /// so a replacement field can restore the shared editing selection.
     func updateUIView(_ field: CompletionField, context: Context) {
         if !field.isFirstResponder, field.text != model.query { field.text = model.query }
         field.refreshSuffix()
@@ -89,6 +95,9 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
 
         init(model: BrowserCommandPaletteModel) { self.model = model }
 
+        /// Captures the saved selection before first-responder callbacks can
+        /// overwrite it. Restores a matching, non-composing draft in UIKit's
+        /// UTF-16 coordinates, or selects all when no usable range remains.
         func focusField() {
             guard let field else { return }
             let selection = model.completionEditing.selectionForRestoration(of: model.query)
@@ -103,6 +112,9 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
             }
         }
 
+        /// Records text, UTF-16 selection and marked-text composition together.
+        /// Selection-only delegate callbacks use the same path so a replacement
+        /// field resumes the caret even when the query itself did not change.
         @objc func editingChanged() {
             guard let field, let range = field.selectedTextRange else { return }
             model.updateCompletionEditing(

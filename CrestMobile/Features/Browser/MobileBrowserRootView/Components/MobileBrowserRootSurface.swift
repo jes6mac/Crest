@@ -25,6 +25,8 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     private var sidebarOnRight: Bool { BrowserDeviceAppearanceStore.shared.sidebarOnRight }
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
+    /// The width all visible split cards need together, including their gaps
+    /// and docked chrome insets. A single card uses the normal detail minimum.
     private var requiredDetailWidth: CGFloat {
         let count = browser.shownCards.count
         guard count > 1 else { return MobileRegularWindowLayout.minimumDetailWidth }
@@ -34,6 +36,9 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             + insets.leading + insets.trailing
     }
 
+    /// Fits regular split columns before reserving sidebar space. The palette
+    /// covers the active shell and excludes its background from interaction
+    /// and accessibility; a presented compact page hosts its own palette.
     var body: some View {
         ZStack {
             if !presentation.presentsPageOverTabViewer {

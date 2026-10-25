@@ -37,6 +37,9 @@ struct BrowserCollapsedSidebarRevealControl: View {
 
     // MARK: - Actions - Layout
 
+    /// Keeps button and assistive activation available alongside hover or
+    /// inward-swipe input. The shell chooses whether the middle of the edge
+    /// remains available for the page's history gesture.
     var body: some View {
         Button(action: showSidebar) {
             revealArea

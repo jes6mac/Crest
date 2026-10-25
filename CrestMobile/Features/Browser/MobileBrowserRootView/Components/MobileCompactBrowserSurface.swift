@@ -38,6 +38,8 @@ struct MobileCompactBrowserSurface<
 
     // MARK: - Actions - Layout
 
+    /// Presents the page above its tab viewer. A floating sidebar reuses the
+    /// regular layout and its outside-tap handler inside that presentation.
     var body: some View {
         dockedSidebar
             .allowsHitTesting(!compactShowsPage)

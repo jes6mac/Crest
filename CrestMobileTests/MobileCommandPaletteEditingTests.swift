@@ -5,6 +5,8 @@ import XCTest
 
 @MainActor
 final class MobileCommandPaletteEditingTests: XCTestCase {
+    /// Recreating the native field must preserve a caret within the draft.
+    /// The emoji before that caret exercises UIKit's UTF-16 selection offsets.
     func testReplacementFieldContinuesTheDraftAtItsCaret() throws {
         let fixture = makeEditor()
         fixture.field.insertText("café 🧭 test")
@@ -25,6 +27,9 @@ final class MobileCommandPaletteEditingTests: XCTestCase {
         XCTAssertEqual(fixture.model.query, "café 🧭 nouveau test")
     }
 
+    /// Creates an editor backed by seeded browsing state. Unexpected tab
+    /// selection or navigation fails the test, keeping field replacement
+    /// separate from submitting the draft.
     private func makeEditor(
         presentation: BrowserCommandPalettePresentation = .overlay,
         openURL: @escaping (URL) -> Bool = { _ in

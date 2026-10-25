@@ -39,11 +39,20 @@ struct MobileRegularWindowLayout: Equatable, Sendable {
 
     // MARK: - Initializers
 
+    /// Fits the sidebar beside the required page area when possible, or
+    /// lets it float when columns or a fold need that space. This computes
+    /// temporary geometry without changing the saved docking preference.
+    ///
     /// - Parameters:
+    ///   - availableWidth: Usable window width in points, clamped to zero.
+    ///   - preferredSidebarWidth: The person's requested width, clamped
+    ///     to the supported sidebar range.
     ///   - foldSpan: Where a fold crosses the window, from its leading edge.
     ///   - sidebarEdge: The window edge the sidebar keeps to.
     ///   - presentsColumns: Whether the page is a split, whose pages take the
     ///     fold's two sides.
+    ///   - requiredDetailWidth: Width needed by all visible page columns,
+    ///     gaps and chrome insets, never less than the detail minimum.
     ///   - sharesTopBandWithStatusBar: Whether the display keeps a top band
     ///     the status bar shares with a top bar.
     init(

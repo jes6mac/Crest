@@ -8,6 +8,8 @@ struct MobileBrowserCommandPaletteLayer: View {
     let morphNamespace: Namespace.ID?
     let overlayContentInsets: EdgeInsets
 
+    /// Renders only a still-authorized editing session. The model identity keeps
+    /// presentation updates from resetting its query or native field state.
     var body: some View {
         if let model, model.isCompletionSourceAvailable {
             BrowserCommandPaletteContent(

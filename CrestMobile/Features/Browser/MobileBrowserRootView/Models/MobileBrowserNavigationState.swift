@@ -197,11 +197,16 @@ final class MobileBrowserNavigationState {
         showTabViewer()
     }
 
+    /// Reveals a temporary overlay without replacing the saved docking choice.
+    /// Schedules dismissal unless interaction or a locked Space keeps it visible.
     func showRegularSidebar() {
         regularSidebarPresentation = .floating
         scheduleTransientSidebarDismissal()
     }
 
+    /// Requests a fixed sidebar, falling back to floating while a regular
+    /// split needs its width. Compact tab viewers may still dock, since their
+    /// page is presented over the sidebar instead of beside it.
     func dockRegularSidebar() {
         if !presentation.presentsPageOverTabViewer, splitLayoutPreventsSidebarDocking {
             showRegularSidebar()
@@ -253,6 +258,8 @@ final class MobileBrowserNavigationState {
         }
     }
 
+    /// Applies the new shell before settling its sidebar, so compact docking
+    /// rules see the current presentation rather than the previous display.
     func adapt(to presentation: MobileBrowserPresentation) {
         self.presentation = presentation
         hasAdaptedPresentation = true

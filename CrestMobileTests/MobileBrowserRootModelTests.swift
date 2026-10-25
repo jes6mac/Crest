@@ -5,6 +5,8 @@ import XCTest
 
 @MainActor
 final class MobileBrowserRootModelTests: XCTestCase {
+    /// A display transition keeps the same editing session without mutating
+    /// browsing state; explicitly dismissing it starts a fresh draft next time.
     func testAddressDraftSurvivesPresentationChangesWithoutNavigating() throws {
         let space = makeSpace(index: 10)
         let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
@@ -28,6 +30,8 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.model.commandPalette?.query, "https://example.com/")
     }
 
+    /// Changing either the selected tab or its profile invalidates the draft,
+    /// including a profile replacement that leaves the selected tab unchanged.
     func testAddressDraftDoesNotFollowAnotherTabOrProfile() throws {
         var space = makeSpace(index: 10)
         let otherTab = TabState.Seed(title: "Second", url: URL(string: "https://example.org/"), placement: .current)
@@ -49,6 +53,9 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertNil(fixture.model.commandPalette)
     }
 
+    /// A retained page cannot act after its Space locks, even before selection
+    /// reconciliation. The draft is then cleared, and unlocking restores the
+    /// authorized page rather than creating a different browsing session.
     func testLockImmediatelyRevokesRetainedPageActionsBeforeReconciliation() async throws {
         var space = makeSpace(index: 52)
         space.settings.accessPolicy = .deviceOwnerAuthentication

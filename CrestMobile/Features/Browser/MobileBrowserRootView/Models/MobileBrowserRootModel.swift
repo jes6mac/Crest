@@ -63,6 +63,9 @@ final class MobileBrowserRootModel {
 // MARK: - Lifecycle
 
 extension MobileBrowserRootModel {
+    /// Adapts navigation and Settings without replacing the address-editing
+    /// session. Regular layouts save sidebar geometry but preserve the saved
+    /// visibility choice while a split temporarily hides the sidebar.
     func presentationChanged(to presentation: MobileBrowserPresentation) {
         navigation.adapt(to: presentation)
         settings.adapt(to: presentation)
@@ -127,6 +130,9 @@ extension MobileBrowserRootModel {
         Task { await pages.reloadContentBlocking() }
     }
 
+    /// Relocks resident and archived pages using each Space's current profile.
+    /// Removed Spaces are ignored; a bare Space ID cannot identify the
+    /// profile that owns archived page state.
     func relockProtectedSpaces(_ spaceIDs: Set<UUID>) {
         // The Space itself, not just its ID: relocking has to reach the
         // profile its archived tab state is filed under, and that state
@@ -136,6 +142,8 @@ extension MobileBrowserRootModel {
         }
     }
 
+    /// Persists the person's docking choice unless a split temporarily hid it.
+    /// Collapsing the sidebar also dismisses any utility presented within it.
     func regularSidebarPresentationChanged(
         _ presentation: BrowserSidebarPresentation
     ) {
@@ -315,6 +323,9 @@ extension MobileBrowserRootModel {
         Set(browser.spaceModels.filter(spaceAccess.isLocked).map(\.id))
     }
 
+    /// Discards a draft whose source changed, even before pages are prepared.
+    /// Returns whether a prepared browser changed selection; page activation
+    /// may still be deferred while the compact tab viewer is showing.
     @discardableResult
     func synchronizeSelection(
         from previous: MobileBrowserRootSelectionSnapshot,
@@ -331,6 +342,8 @@ extension MobileBrowserRootModel {
         return true
     }
 
+    /// Clears the draft and address and withdraws page presentation on lock.
+    /// An unlock resumes presentation only after browser preparation.
     func synchronizeLockTransition(
         from previous: MobileBrowserRootLockSnapshot,
         to current: MobileBrowserRootLockSnapshot
@@ -514,6 +527,9 @@ extension MobileBrowserRootModel {
         browser.shownTabAssignment
     }
 
+    /// Starts a window-owned draft bound to the selected tab, Space and profile.
+    /// Does nothing when that source cannot act. The mode supplies the initial
+    /// query and opening behavior; commands come from the current scene.
     func presentCommandPalette(
         mode: BrowserCommandPaletteMode,
         commands: BrowserCommandPaletteCommandRegistry? = nil
@@ -536,6 +552,9 @@ extension MobileBrowserRootModel {
         )
     }
 
+    /// Keeps a draft through display changes only while its source assignment
+    /// is still selected and authorized. Tab or profile changes and Space
+    /// locking discard it before another context can reuse the text.
     func reconcileCommandPalette() {
         guard let source = commandPaletteSource else { return }
         if source != selectedTabAssignment || !isPaletteSourceAvailable(source) {
@@ -543,12 +562,16 @@ extension MobileBrowserRootModel {
         }
     }
 
+    /// Invalidates pending completion work before releasing the draft and its
+    /// source, so a later editing session starts with its own initial query.
     func dismissCommandPalette() {
         commandPalette?.invalidateURLCompletion()
         commandPalette = nil
         commandPaletteSource = nil
     }
 
+    /// Revalidates a captured tab assignment against the live browser and
+    /// Space access controller before a retained palette may act on it.
     func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {

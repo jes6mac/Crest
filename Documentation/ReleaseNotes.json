@@ -4533,6 +4533,10 @@
     "mobile-duo-main-integration-review": {
       "category": "internal",
       "message": "Retain focused Duo navigation and draft regression coverage after integrating the current main branch."
+    },
+    "mobile-duo-editing-and-navigation-contracts": {
+      "category": "internal",
+      "message": "Document mobile draft ownership, caret restoration and adaptive sidebar behavior."
     }
   }
 }
