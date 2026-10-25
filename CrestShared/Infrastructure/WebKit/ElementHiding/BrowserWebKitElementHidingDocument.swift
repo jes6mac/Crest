@@ -1,7 +1,7 @@
 import Foundation
 import WebKit
 
-/// WebKit owns frame identity and injects interception before the site's scripts.
+/// Bridges the isolated main-frame controller using frame identity and origin supplied by WebKit.
 @MainActor
 final class BrowserWebKitElementHidingDocument: NSObject, WKScriptMessageHandler {
     // MARK: - Static Variables
@@ -16,6 +16,8 @@ final class BrowserWebKitElementHidingDocument: NSObject, WKScriptMessageHandler
 
     // MARK: - Initializers
 
+    /// Installs the main-frame controller at document start in a dedicated content world.
+    /// The caller must own the user-content controller and call stop when releasing the page.
     init(webView: WKWebView, session: BrowserElementHidingSession) {
         self.webView = webView
         self.session = session
@@ -33,6 +35,8 @@ final class BrowserWebKitElementHidingDocument: NSObject, WKScriptMessageHandler
 
     // MARK: - Actions - Messages
 
+    /// Rejects messages from other web views, subframes, non-web origins or oversized payloads
+    /// before handing typed data and WebKit's verified origin to the session.
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.webView === webView, message.frameInfo.isMainFrame,
             let body = message.body as? String, body.utf8.count <= 8_192,
@@ -45,6 +49,7 @@ final class BrowserWebKitElementHidingDocument: NSObject, WKScriptMessageHandler
         session.receive(value, origin: origin)
     }
 
+    /// Disconnects the session and removes the retaining message handler before releasing the web view.
     func stop() {
         session.disconnect()
         webView?.configuration.userContentController.removeScriptMessageHandler(

@@ -25,6 +25,8 @@ struct MobileElementHidingSnapshot: View, Animatable {
 
     // MARK: - Initializers
 
+    /// Crops a captured block into at most 100 in-memory tiles. Returns nil for missing pixels
+    /// or an empty frame, allowing the caller to hide the element without an animation.
     init?(image: UIImage, frame: CGRect) {
         guard let pixels = image.cgImage, frame.width > 0, frame.height > 0 else { return nil }
         let columns = 10
@@ -56,6 +58,8 @@ struct MobileElementHidingSnapshot: View, Animatable {
 
     // MARK: - Actions - Rendering
 
+    /// Reuses the captured tiles at the supplied animation progress. Reduced Motion keeps tiles
+    /// in place and fades them instead of applying drift and shrinkage.
     func render(progress: CGFloat, reduceMotion: Bool) -> Self {
         var copy = self
         copy.progress = progress

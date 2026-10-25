@@ -12,6 +12,8 @@ public sealed record ElementHidingRule(Guid Id, Guid? SpaceId, SiteOrigin Origin
 
     #region Variables
 
+    /// <summary>Bounds persisted target metadata and rejects protected document tags or non-web origins.
+    /// The adapter must separately verify that the selector still identifies the intended DOM node.</summary>
     public bool IsValid => Id != Guid.Empty && Origin.IsValid && Origin.Scheme is "http" or "https"
         && !string.IsNullOrWhiteSpace(Selector) && Selector.Length <= MaximumSelectorLength
         && TagName.Length is > 0 and <= 64 && TagName.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')

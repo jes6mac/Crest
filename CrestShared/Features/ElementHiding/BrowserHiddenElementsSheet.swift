@@ -45,6 +45,8 @@ struct BrowserHiddenElementsSheet: View {
         .presentationDetents([.medium, .large])
     }
 
+    /// Offers a Space exception or a return to the global rule; deletion is shown only when
+    /// the scoped read model permits it. The core validates the action again when invoked.
     private func row(_ entry: ElementHidingEntry, canRemove: Bool) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {

@@ -38,7 +38,8 @@ private struct BrowserHiddenElement: Encodable {
     let label: String
 }
 
-/// A document-bound preview session. Only Finish writes rules through the core.
+/// Keeps previews bound to one document until Finish saves the batch through the core.
+/// Saved-rule management sends its changes immediately, independently of selection.
 @MainActor
 @Observable
 final class BrowserElementHidingSession {
@@ -75,6 +76,7 @@ final class BrowserElementHidingSession {
 
     // MARK: - Initializers
 
+    /// Binds rule queries and intents to one Space; document access is supplied later by the engine adapter.
     init(core: CrestCore, spaceID: UUID) {
         self.core = core
         self.spaceID = spaceID
@@ -82,11 +84,14 @@ final class BrowserElementHidingSession {
 
     // MARK: - Actions - Document
 
+    /// Attaches the adapter for isolated document commands and observes rule changes from other Spaces.
     func connect(evaluate: @escaping Evaluate) {
         self.evaluate = evaluate
         observeChanges()
     }
 
+    /// Accepts messages from an origin verified by the adapter. Selection messages must also match
+    /// the current document and selection token, with bounded text and finite viewport coordinates.
     func receive(_ message: BrowserElementHidingMessage, origin: SiteOrigin) {
         guard UUID(uuidString: message.documentID) != nil else { return }
         switch message.kind {
@@ -137,11 +142,14 @@ final class BrowserElementHidingSession {
         isAvailable = false
     }
 
+    /// Cancels previews, retires document identity and releases the adapter when the page is removed.
     func disconnect() {
         invalidateDocument()
         evaluate = nil
     }
 
+    /// Sends the effective hidden rules for this Space and origin. A monotonically increasing revision
+    /// lets the document ignore an older update that arrives after a newer one.
     func refresh() {
         guard let documentID, let evaluate else { return }
         let rules = state.entries.filter(\.isHidden).map {
@@ -158,6 +166,8 @@ final class BrowserElementHidingSession {
         }
     }
 
+    /// Rearms observation after each core revision so changes elsewhere reach this document
+    /// without publishing private rules in the shared read model.
     private func observeChanges() {
         guard evaluate != nil else { return }
         withObservationTracking {
@@ -172,6 +182,8 @@ final class BrowserElementHidingSession {
 
     // MARK: - Actions - Selection
 
+    /// Starts an empty, Space-local preview batch with a fresh token. A delayed adapter reply
+    /// cannot restart a session that has already been cancelled or replaced.
     func start() {
         guard isAvailable, !isSelecting, let documentID, let evaluate else { return }
         let token = UUID().uuidString
@@ -195,6 +207,7 @@ final class BrowserElementHidingSession {
         }
     }
 
+    /// Asks the current document to select a reliably identifiable ancestor while no preview is in flight.
     func selectParent() {
         guard !isBusy, let documentID, let selectionToken, let evaluate else { return }
         Task {
@@ -204,6 +217,8 @@ final class BrowserElementHidingSession {
         }
     }
 
+    /// Restores unsaved previews in the document and invalidates pending selection replies.
+    /// Previously saved rules remain effective.
     func cancel() {
         if let documentID, let selectionToken, let evaluate {
             Task {
@@ -220,6 +235,8 @@ final class BrowserElementHidingSession {
         status = nil
     }
 
+    /// Temporarily hides the expected selection without saving a rule. Returns false if the
+    /// selection, document or token changed while the adapter was working.
     func preview(_ expected: BrowserElementHidingSelection) async -> Bool {
         guard !isBusy, selection?.selector == expected.selector, selectionToken == expected.sessionID,
             let documentID, let selectionToken, let evaluate
@@ -247,6 +264,8 @@ final class BrowserElementHidingSession {
         }
     }
 
+    /// Restores the last unsaved element only after the matching document confirms the undo.
+    /// Keeps the continuous selection session open.
     func undo() async {
         guard !isBusy, !previews.isEmpty, let documentID, let selectionToken, let evaluate else { return }
         isBusy = true
@@ -260,6 +279,8 @@ final class BrowserElementHidingSession {
         status = nil
     }
 
+    /// Revalidates every preview, then saves the batch in one core intent. Invalid or rejected
+    /// batches stay open for undo or cancellation. Committed rules reach the document before previews end.
     func finish() async {
         guard !isBusy, let origin, let documentID, let selectionToken, let evaluate else { return }
         if previews.isEmpty {
@@ -305,10 +326,14 @@ final class BrowserElementHidingSession {
 
     // MARK: - Actions - Rules
 
+    /// Restores the element in this Space, using an exception for a global rule or deleting a local rule.
     func show(_ rule: ElementHidingRule) { perform(ShowPageElement(spaceID: spaceID, ruleID: rule.id)) }
+    /// Removes this Space's exception so the inherited global rule hides the element again.
     func follow(_ rule: ElementHidingRule) { perform(FollowPageElementRule(spaceID: spaceID, ruleID: rule.id)) }
+    /// Requests deletion of the saved rule; the core enforces ownership and private-session restrictions.
     func forget(_ rule: ElementHidingRule) { perform(ForgetPageElementRule(spaceID: spaceID, ruleID: rule.id)) }
 
+    /// Applies a saved-rule action through the core and refreshes the document, or exposes a recoverable status.
     private func perform(_ intent: some Intent) {
         do {
             try core.send(intent)

@@ -31,6 +31,8 @@ extension MobileBrowserPage: WKNavigationDelegate {
         )
     }
 
+    /// Cancels document-bound interactions when a load begins. Element-hiding identity stays
+    /// available because a failure or download may leave the existing document on screen.
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         elementHiding.navigationStarted()
         translation.reset()
@@ -55,6 +57,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         reporter.started(webView.url)
     }
 
+    /// Retires the old element-hiding document only when the current navigation commits its replacement.
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
         elementHiding.invalidateDocument()

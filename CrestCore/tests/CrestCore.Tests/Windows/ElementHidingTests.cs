@@ -8,6 +8,7 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
+    /// <summary>Protects atomic saves against invalid targets, exhausted quotas and forbidden private global writes.</summary>
     [Fact]
     public void ElementHidingSessionCommitsAllTargetsOrNone() {
         using var directory = new StorageDirectory();
@@ -40,6 +41,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2, app.Device.Records().ElementHiding.Rules.Count);
     }
 
+    /// <summary>Verifies that rules and exceptions survive local relaunch without entering the synced session payload.</summary>
     [Fact]
     public void ElementHidingRulesAndSpaceExceptionsSurviveRelaunchOutsideTheSyncedSession() {
         using var directory = new StorageDirectory();
@@ -73,6 +75,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(relaunched.Query(new GetElementHiding(work, new SiteOrigin("https", "other.example", 443))).Entries);
     }
 
+    /// <summary>Verifies that private changes never alter saved global state and disappear on reset or workspace closure.</summary>
     [Fact]
     public void ElementHidingPrivateChangesAreTemporaryAndCannotEditGlobalRules() {
         using var directory = new StorageDirectory();
@@ -114,6 +117,7 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(app.Device.Records().ElementHiding.Rules, rule => rule.Selector == "#private-only");
     }
 
+    /// <summary>Protects local ownership and exception cleanup when a global rule is deleted from another Space.</summary>
     [Fact]
     public void ElementHidingGlobalRemovalPreservesLocalRulesAndClearsExceptions() {
         using var directory = new StorageDirectory();
@@ -135,6 +139,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(app.Device.Records().ElementHiding.Exceptions);
     }
 
+    /// <summary>Ensures rejected owners and protected or oversized targets leave no stored rule behind.</summary>
     [Fact]
     public void ElementHidingRejectsUnknownOwnersAndUnsafeTargets() {
         using var directory = new StorageDirectory();

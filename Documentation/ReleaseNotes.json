@@ -4525,6 +4525,10 @@
     "element-hiding-shared-runtime-integration": {
       "category": "internal",
       "message": "Integrate element hiding with the consolidated shared runtime and regenerated native contracts."
+    },
+    "element-hiding-contract-documentation": {
+      "category": "internal",
+      "message": "Document element-hiding ownership, private-session lifetime, persistence and WebKit selection contracts."
     }
   }
 }

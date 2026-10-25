@@ -98,6 +98,7 @@ final class MobileElementHidingTests: XCTestCase {
 
     // MARK: - Actions - Fixtures
 
+    /// Creates an in-memory core and an ephemeral WebKit page so selection tests cannot touch browsing data.
     private func makePage() throws -> (BrowserStore, MobileBrowserPageStore, MobileBrowserPage) {
         let tab = TabState.Seed.startPage()
         let space = SpaceState.Seed(name: "Hiding", symbol: "circle", accent: .indigo, folders: [], tabs: [tab])
@@ -110,6 +111,7 @@ final class MobileElementHidingTests: XCTestCase {
         return (browser, pages, page)
     }
 
+    /// Loads a simulated web origin without network access and waits for the isolated controller to identify it.
     private func load(_ html: String, in page: MobileBrowserPage, host: String = "hiding.crest.test") async throws {
         page.webView.loadSimulatedRequest(
             URLRequest(url: try XCTUnwrap(URL(string: "https://\(host)/"))),
@@ -118,6 +120,7 @@ final class MobileElementHidingTests: XCTestCase {
         try await waitUntil { page.elementHiding.isAvailable && page.elementHiding.origin?.host == host }
     }
 
+    /// Exercises the document's click interception and native preview acknowledgement before mutating the fixture.
     private func previewFirstElement(in page: MobileBrowserPage) async throws {
         page.elementHiding.start()
         try await waitUntil {
@@ -136,6 +139,7 @@ final class MobileElementHidingTests: XCTestCase {
         XCTAssertTrue(previewed)
     }
 
+    /// Allows asynchronous WebKit messages to settle within a bounded deadline; reports and throws on timeout.
     private func waitUntil(_ predicate: () async throws -> Bool) async throws {
         let deadline = ContinuousClock.now.advanced(by: .seconds(8))
         while ContinuousClock.now < deadline {

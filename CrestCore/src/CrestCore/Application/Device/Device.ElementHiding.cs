@@ -13,6 +13,8 @@ internal sealed partial class Device {
 
     #region Actions - Element hiding
 
+    /// <summary>Combines global rules with this Space's rules and exceptions for one exact origin.
+    /// Locked or unknown Spaces and invalid origins are rejected before exposing any rules.</summary>
     internal ElementHidingState ElementHiding(Guid spaceId, SiteOrigin origin) {
         var (keeps, isPrivate) = ElementHidingScope(spaceId);
         if (!origin.IsValid) throw new Rejected(new InvalidSiteOrigin(origin));
@@ -25,10 +27,12 @@ internal sealed partial class Device {
         }
     }
 
+    /// <summary>Uses the batch path for one rule, preserving its ownership, privacy and quota checks.</summary>
     internal void HideElement(Guid spaceId, ElementHidingRule rule, ChangeFeed changes) =>
         HideElements(spaceId, [rule], changes);
 
-    /// Validate the complete selection before changing either rules or exceptions.
+    /// <summary>Validates every target, ownership, global-write permission and quota before changing
+    /// either ledger. Duplicate targets are ignored; reapplying a global rule clears this Space's exception.</summary>
     internal void HideElements(Guid spaceId, IReadOnlyList<ElementHidingRule> rules, ChangeFeed changes) {
         var (keeps, isPrivate) = ElementHidingScope(spaceId);
         foreach (var rule in rules) {
@@ -62,6 +66,8 @@ internal sealed partial class Device {
         }
     }
 
+    /// <summary>Makes a rule visible only in this Space: global rules gain an exception,
+    /// while a rule owned by this Space is removed. Private exceptions stay in memory.</summary>
     internal void ShowElement(Guid spaceId, Guid ruleId, ChangeFeed changes) {
         var (keeps, _) = ElementHidingScope(spaceId);
         lock (gate) {
@@ -73,6 +79,7 @@ internal sealed partial class Device {
         }
     }
 
+    /// <summary>Removes only this Space's visibility exception, restoring inheritance of a global rule.</summary>
     internal void FollowElement(Guid spaceId, Guid ruleId, ChangeFeed changes) {
         var (keeps, _) = ElementHidingScope(spaceId);
         lock (gate) {
@@ -80,6 +87,8 @@ internal sealed partial class Device {
         }
     }
 
+    /// <summary>Deletes an owned local rule or an authorized global rule, including its exceptions.
+    /// Private and non-persistent workspaces cannot delete a global rule.</summary>
     internal void ForgetElement(Guid spaceId, Guid ruleId, ChangeFeed changes) {
         var (keeps, isPrivate) = ElementHidingScope(spaceId);
         lock (gate) {
@@ -93,6 +102,8 @@ internal sealed partial class Device {
         }
     }
 
+    /// <summary>Resolves the Space against attached workspaces, preferring the persistent owner.
+    /// Rejects locked or unknown Spaces and reports whether changes may be kept on disk.</summary>
     private (bool Keeps, bool IsPrivate) ElementHidingScope(Guid spaceId) {
         KeyValuePair<Guid, NativeSessionAuthority>[] attached;
         Guid? persistent;
@@ -108,11 +119,15 @@ internal sealed partial class Device {
         throw new Rejected(new UnknownSpace(spaceId));
     }
 
+    /// <summary>While holding the device lock, queues persistent records when needed and publishes
+    /// only an invalidation revision, never the rules themselves.</summary>
     private void PublishElementHiding(bool keeps, ChangeFeed changes) {
         if (keeps) storage?.EnqueueDevice(Records());
         changes.Publish(new ElementHidingChanged(++elementHidingRevision));
     }
 
+    /// <summary>Removes rules and exceptions owned by departed Spaces. Workspace closure clears
+    /// only temporary state; deleting persistent Spaces also clears their saved state.</summary>
     private void ForgetElementSpaces(IReadOnlySet<Guid> spaceIds, bool includeKept) {
         lock (gate) {
             bool changed = passingElements.ForgetSpaces(spaceIds);

@@ -29,6 +29,8 @@ internal sealed class ElementHidingLedger {
 
     #region Actions - Rules
 
+    /// <summary>Replaces the ledger with valid stored rules up to its capacity, retaining exceptions
+    /// only for restored global rules. The caller holds the device lock.</summary>
     public void Restore(ElementHidingRecords records) {
         rules.Clear();
         rules.AddRange(records.Rules.Where(rule => rule.IsValid).Take(MaximumRules));
@@ -36,6 +38,8 @@ internal sealed class ElementHidingLedger {
         exceptions.UnionWith(records.Exceptions.Where(value => rules.Any(rule => rule.Id == value.RuleId && rule.SpaceId is null)));
     }
 
+    /// <summary>Adds a validated target once per scope, origin, selector and tag. Returns false for
+    /// a duplicate; rejects invalid targets or a full ledger. The caller holds the device lock.</summary>
     public bool Add(ElementHidingRule rule) {
         if (!rule.IsValid) throw new Rejected(new InvalidElementHidingRule());
         if (rules.Any(existing => existing.SpaceId == rule.SpaceId && existing.Origin == rule.Origin
@@ -45,15 +49,22 @@ internal sealed class ElementHidingLedger {
         return true;
     }
 
+    /// <summary>Records a visibility exception and returns whether it was new. The device must
+    /// first verify that the rule is global and hold its lock.</summary>
     public bool Except(Guid spaceId, Guid ruleId) => exceptions.Add(new(spaceId, ruleId));
+    /// <summary>Returns whether this Space has no visibility exception for the rule; does not test rule existence.</summary>
     public bool Follows(Guid spaceId, Guid ruleId) => !exceptions.Contains(new(spaceId, ruleId));
+    /// <summary>Removes this Space's exception, returning whether inheritance changed.</summary>
     public bool Inherit(Guid spaceId, Guid ruleId) => exceptions.Remove(new(spaceId, ruleId));
 
+    /// <summary>Removes a rule and every exception referencing it, including exceptions whose rule
+    /// lives in the other ledger. Returns whether any stored state changed.</summary>
     public bool Remove(Guid ruleId) {
         bool changed = rules.RemoveAll(rule => rule.Id == ruleId) > 0;
         return exceptions.RemoveWhere(value => value.RuleId == ruleId) > 0 || changed;
     }
 
+    /// <summary>Removes local rules and exceptions belonging to the given Spaces, preserving global rules.</summary>
     public bool ForgetSpaces(IReadOnlySet<Guid> spaceIds) {
         bool changed = rules.RemoveAll(rule => rule.SpaceId is { } space && spaceIds.Contains(space)) > 0;
         return exceptions.RemoveWhere(value => spaceIds.Contains(value.SpaceId)) > 0 || changed;

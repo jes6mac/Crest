@@ -538,6 +538,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         corePage.unloaded()
     }
 
+    /// Stops page-owned bridges, pending requests and media before detaching delegates and
+    /// observers. Element hiding also releases its message handler and unsaved selection.
     private func tearDownWebView() {
         enginePage.close()
         faviconSession.stop()

@@ -57,6 +57,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
 
     #region Actions - Equality
 
+    /// <summary>Compares the device snapshot used to suppress redundant writes, including the ordered
+    /// hiding rules and exceptions. Palette memories retain their existing reference-equality contract.</summary>
     public bool Equals(DeviceRecords? other) => other is not null
         && Windows.SequenceEqual(other.Windows)
         && Reopening.SequenceEqual(other.Reopening)

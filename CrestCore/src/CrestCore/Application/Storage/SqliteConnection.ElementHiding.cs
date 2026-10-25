@@ -5,12 +5,14 @@ namespace CrestCore.Application;
 internal sealed partial class SqliteConnection {
     #region Actions - Element hiding
 
+    /// <summary>Creates device-local rule and exception tables outside the synced session checkpoint.</summary>
     private void CreateElementHidingTables() {
         Execute("CREATE TABLE IF NOT EXISTS device_hidden_element (id TEXT PRIMARY KEY, space TEXT, scheme TEXT NOT NULL, "
             + "host TEXT NOT NULL, port INTEGER NOT NULL, selector TEXT NOT NULL, tag TEXT NOT NULL, label TEXT NOT NULL, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_hidden_element_exception (space TEXT NOT NULL, rule TEXT NOT NULL, PRIMARY KEY (space, rule))");
     }
 
+    /// <summary>Restores rule order while ignoring invalid rows and exceptions that no longer reference a global rule.</summary>
     private ElementHidingRecords ReadElementHiding() {
         var rules = new List<ElementHidingRule>();
         Rows("SELECT id, space, scheme, host, port, selector, tag, label FROM device_hidden_element ORDER BY position", statement => {
@@ -30,6 +32,8 @@ internal sealed partial class SqliteConnection {
         return new(rules, exceptions);
     }
 
+    /// <summary>Replaces persisted rules and exceptions inside the caller's device-write transaction.
+    /// The supplied snapshot contains kept rules only; private-session state must never reach this writer.</summary>
     private void WriteElementHiding(ElementHidingRecords records) {
         Execute("DELETE FROM device_hidden_element");
         Execute("DELETE FROM device_hidden_element_exception");

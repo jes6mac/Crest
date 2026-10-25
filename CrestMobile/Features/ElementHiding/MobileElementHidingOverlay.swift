@@ -65,6 +65,7 @@ struct MobileElementHidingOverlay: View {
 
     // MARK: - Actions - Preview
 
+    /// Converts CSS viewport coordinates to the native page frame, including the current page scale.
     private func selectionFrame(_ selection: BrowserElementHidingSelection, pageFrame: CGRect) -> CGRect {
         let bounds = selection.bounds
         let scale = pageFrame.width / bounds.viewportWidth
@@ -73,6 +74,8 @@ struct MobileElementHidingOverlay: View {
             width: bounds.width * scale, height: bounds.height * scale)
     }
 
+    /// Captures only the visible portion, then asks the session to preview the same selection.
+    /// A snapshot failure still permits hiding; successful animation images are discarded after the transition.
     private func hide(_ selection: BrowserElementHidingSelection, pageFrame: CGRect, visible: CGRect) async {
         guard !isCapturing, !page.elementHiding.isBusy else { return }
         isCapturing = true
